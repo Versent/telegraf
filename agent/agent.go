@@ -270,12 +270,18 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 		case <-ticker.C:
 			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
-		case m := <-metricC:
-			for i, o := range a.Config.Outputs {
-				if i == len(a.Config.Outputs)-1 {
-					o.AddMetric(m)
-				} else {
-					o.AddMetric(copyMetric(m))
+		case metric := <-metricC:
+			mS := []telegraf.Metric{metric}
+			for _, filter := range a.Config.Filters {
+				mS = filter.Apply(mS...)
+			}
+			for _, m := range mS {
+				for i, o := range a.Config.Outputs {
+					if i == len(a.Config.Outputs)-1 {
+						o.AddMetric(m)
+					} else {
+						o.AddMetric(copyMetric(m))
+					}
 				}
 			}
 		}

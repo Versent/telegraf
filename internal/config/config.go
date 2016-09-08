@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/plugins/filters"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -50,6 +51,7 @@ type Config struct {
 	Agent   *AgentConfig
 	Inputs  []*models.RunningInput
 	Outputs []*models.RunningOutput
+	Filters []*models.RunningFilterPlugin
 }
 
 func NewConfig() *Config {
@@ -64,6 +66,7 @@ func NewConfig() *Config {
 		Tags:          make(map[string]string),
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
+		Filters:       make([]*models.RunningFilterPlugin, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -532,6 +535,24 @@ func (c *Config) LoadConfig(path string) error {
 						pluginName, path)
 				}
 			}
+		case "filters":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case *ast.Table:
+					if err = c.addFilterPlugin(pluginName, pluginSubTable); err != nil {
+						return fmt.Errorf("Error parsing %s, %s", path, err)
+					}
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addFilterPlugin(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", path, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
+				}
+			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
@@ -570,6 +591,32 @@ func parseFile(fpath string) (*ast.Table, error) {
 	}
 
 	return toml.Parse(contents)
+}
+
+func (c *Config) addFilterPlugin(name string, table *ast.Table) error {
+	creator, ok := filters.Filters[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested filter: %s", name)
+	}
+	filter := creator()
+
+	filterConfig, err := buildFilterPlugin(name, table)
+	if err != nil {
+		return err
+	}
+
+	if err := config.UnmarshalTable(table, filter); err != nil {
+		return err
+	}
+
+	rf := &models.RunningFilterPlugin{
+		Name:         name,
+		FilterPlugin: filter,
+		Config:       filterConfig,
+	}
+
+	c.Filters = append(c.Filters, rf)
+	return nil
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -650,6 +697,25 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 	c.Inputs = append(c.Inputs, rp)
 	return nil
+}
+
+// buildFilterPlugin TODO doc
+func buildFilterPlugin(name string, tbl *ast.Table) (*models.FilterPluginConfig, error) {
+	conf := &models.FilterPluginConfig{Name: name}
+	unsupportedFields := []string{"pass", "fieldpass", "drop", "fielddrop",
+		"tagexclude", "taginclude"}
+	for _, field := range unsupportedFields {
+		if _, ok := tbl.Fields[field]; ok {
+			// TODO raise error because field is not supported
+		}
+	}
+
+	var err error
+	conf.Filter, err = buildFilter(tbl)
+	if err != nil {
+		return conf, err
+	}
+	return conf, nil
 }
 
 // buildFilter builds a Filter
