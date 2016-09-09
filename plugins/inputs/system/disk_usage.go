@@ -1,4 +1,4 @@
-package systemu
+package system
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type DiskStats struct {
+type DiskUsageStats struct {
 	ps PS
 
 	// Legacy support
@@ -17,11 +17,11 @@ type DiskStats struct {
 	IgnoreFS    []string `toml:"ignore_fs"`
 }
 
-func (_ *DiskStats) Description() string {
+func (_ *DiskUsageStats) Description() string {
 	return "Read metrics about disk usage by mount point"
 }
 
-var diskSampleConfig = `
+var diskUsageSampleConfig = `
   ## By default, telegraf gather utilisation for all mountpoints.
   ## Setting mountpoints will restrict the stats to the specified mountpoints.
   # mount_points = ["/"]
@@ -31,11 +31,11 @@ var diskSampleConfig = `
   ignore_fs = ["tmpfs", "devtmpfs"]
 `
 
-func (_ *DiskStats) SampleConfig() string {
-	return diskSampleConfig
+func (_ *DiskUsageStats) SampleConfig() string {
+	return diskUsageSampleConfig
 }
 
-func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
+func (s *DiskUsageStats) Gather(acc telegraf.Accumulator) error {
 	// Legacy support:
 	if len(s.Mountpoints) != 0 {
 		s.MountPoints = s.Mountpoints
@@ -64,7 +64,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		fields := map[string]interface{}{
 			"used_percent": used_percent,
 		}
-		acc.AddGauge("disk", fields, tags)
+		acc.AddGauge("disku", fields, tags)
 	}
 
 	return nil
@@ -72,6 +72,6 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("disku", func() telegraf.Input {
-		return &DiskStats{ps: &systemPS{}}
+		return &DiskUsageStats{ps: &systemPS{}}
 	})
 }

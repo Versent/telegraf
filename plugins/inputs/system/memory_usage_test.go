@@ -1,4 +1,4 @@
-package systemu
+package system
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMemStats(t *testing.T) {
+func TestMemUsageStats(t *testing.T) {
 	var mps MockPS
 	var err error
 	defer mps.AssertExpectations(t)
@@ -40,21 +40,21 @@ func TestMemStats(t *testing.T) {
 
 	mps.On("SwapStat").Return(sms, nil)
 
-	err = (&MemStats{&mps}).Gather(&acc)
+	err = (&MemUsageStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
 
 	memfields := map[string]interface{}{
 		"used_percent": float64(5000) / float64(12400) * 100,
 	}
-	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
+	acc.AssertContainsTaggedFields(t, "memu", memfields, make(map[string]string))
 
 	acc.Metrics = nil
 
-	err = (&SwapStats{&mps}).Gather(&acc)
+	err = (&SwapUsageStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
 
 	swapfields := map[string]interface{}{
 		"used_percent": float64(12.2),
 	}
-	acc.AssertContainsTaggedFields(t, "swap", swapfields, make(map[string]string))
+	acc.AssertContainsTaggedFields(t, "swapu", swapfields, make(map[string]string))
 }

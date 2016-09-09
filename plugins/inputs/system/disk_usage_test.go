@@ -1,4 +1,4 @@
-package systemu
+package system
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDiskStats(t *testing.T) {
+func TestDiskUsageStats(t *testing.T) {
 	var mps MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
@@ -54,7 +54,7 @@ func TestDiskStats(t *testing.T) {
 	mps.On("DiskUsage", []string{"/", "/dev"}, []string(nil)).Return(duFiltered, nil)
 	mps.On("DiskUsage", []string{"/", "/home"}, []string(nil)).Return(duAll, nil)
 
-	err = (&DiskStats{ps: &mps}).Gather(&acc)
+	err = (&DiskUsageStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
 
 	numDiskMetrics := acc.NFields()
@@ -76,16 +76,16 @@ func TestDiskStats(t *testing.T) {
 	fields2 := map[string]interface{}{
 		"used_percent": float64(81.30081300813008),
 	}
-	acc.AssertContainsTaggedFields(t, "disk", fields1, tags1)
-	acc.AssertContainsTaggedFields(t, "disk", fields2, tags2)
+	acc.AssertContainsTaggedFields(t, "disku", fields1, tags1)
+	acc.AssertContainsTaggedFields(t, "disku", fields2, tags2)
 
 	// We expect 6 more DiskMetrics to show up with an explicit match on "/"
 	// and /home not matching the /dev in MountPoints
-	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
+	err = (&DiskUsageStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
 	assert.Equal(t, expectedAllDiskMetrics+1, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// / and /home
-	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
+	err = (&DiskUsageStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
 	assert.Equal(t, 2*expectedAllDiskMetrics+1, acc.NFields())
 }

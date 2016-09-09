@@ -1,4 +1,4 @@
-package systemu
+package system
 
 import (
 	"fmt"
@@ -7,17 +7,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type MemStats struct {
+type MemUsageStats struct {
 	ps PS
 }
 
-func (_ *MemStats) Description() string {
+func (_ *MemUsageStats) Description() string {
 	return "Read utilisation of memory metric"
 }
 
-func (_ *MemStats) SampleConfig() string { return "" }
+func (_ *MemUsageStats) SampleConfig() string { return "" }
 
-func (s *MemStats) Gather(acc telegraf.Accumulator) error {
+func (s *MemUsageStats) Gather(acc telegraf.Accumulator) error {
 	vm, err := s.ps.VMStat()
 	if err != nil {
 		return fmt.Errorf("error getting virtual memory info: %s", err)
@@ -26,22 +26,22 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
 		"used_percent": 100 * float64(vm.Used) / float64(vm.Total),
 	}
-	acc.AddCounter("mem", fields, nil)
+	acc.AddCounter("memu", fields, nil)
 
 	return nil
 }
 
-type SwapStats struct {
+type SwapUsageStats struct {
 	ps PS
 }
 
-func (_ *SwapStats) Description() string {
+func (_ *SwapUsageStats) Description() string {
 	return "Read utilisation of swap memory metric"
 }
 
-func (_ *SwapStats) SampleConfig() string { return "" }
+func (_ *SwapUsageStats) SampleConfig() string { return "" }
 
-func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
+func (s *SwapUsageStats) Gather(acc telegraf.Accumulator) error {
 	swap, err := s.ps.SwapStat()
 	if err != nil {
 		return fmt.Errorf("error getting swap memory info: %s", err)
@@ -51,17 +51,17 @@ func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
 		"used_percent": swap.UsedPercent,
 	}
 
-	acc.AddGauge("swap", fieldsG, nil)
+	acc.AddGauge("swapu", fieldsG, nil)
 
 	return nil
 }
 
 func init() {
 	inputs.Add("memu", func() telegraf.Input {
-		return &MemStats{ps: &systemPS{}}
+		return &MemUsageStats{ps: &systemPS{}}
 	})
 
 	inputs.Add("swapu", func() telegraf.Input {
-		return &SwapStats{ps: &systemPS{}}
+		return &SwapUsageStats{ps: &systemPS{}}
 	})
 }
