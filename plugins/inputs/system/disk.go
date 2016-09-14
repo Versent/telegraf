@@ -66,7 +66,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		}
 		var fields map[string]interface{}
 
-		if !s.UsageOnly {
+		if s.UsageOnly {
 			fields = map[string]interface{}{
 				"used_percent": used_percent,
 			}
