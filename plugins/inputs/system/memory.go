@@ -8,14 +8,23 @@ import (
 )
 
 type MemStats struct {
-	ps PS
+	ps        PS
+	UsageOnly bool `toml:"usage_only"`
 }
 
 func (_ *MemStats) Description() string {
 	return "Read metrics about memory usage"
 }
 
-func (_ *MemStats) SampleConfig() string { return "" }
+var memorySampleConfig = `
+  ## By default, telegraf gather stats for all mountpoints.
+  ## Enable only percentage usage.
+  usage_only = true
+`
+
+func (_ *MemStats) SampleConfig() string {
+	return memorySampleConfig
+}
 
 func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 	vm, err := s.ps.VMStat()
@@ -23,18 +32,27 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting virtual memory info: %s", err)
 	}
 
-	fields := map[string]interface{}{
-		"total":             vm.Total,
-		"available":         vm.Available,
-		"used":              vm.Used,
-		"free":              vm.Free,
-		"cached":            vm.Cached,
-		"buffered":          vm.Buffers,
-		"active":            vm.Active,
-		"inactive":          vm.Inactive,
-		"used_percent":      100 * float64(vm.Used) / float64(vm.Total),
-		"available_percent": 100 * float64(vm.Available) / float64(vm.Total),
+	var fields map[string]interface{}
+
+	if s.UsageOnly {
+		fields = map[string]interface{}{
+			"used_percent": 100 * float64(vm.Used) / float64(vm.Total),
+		}
+	} else {
+		fields = map[string]interface{}{
+			"total":             vm.Total,
+			"available":         vm.Available,
+			"used":              vm.Used,
+			"free":              vm.Free,
+			"cached":            vm.Cached,
+			"buffered":          vm.Buffers,
+			"active":            vm.Active,
+			"inactive":          vm.Inactive,
+			"used_percent":      100 * float64(vm.Used) / float64(vm.Total),
+			"available_percent": 100 * float64(vm.Available) / float64(vm.Total),
+		}
 	}
+
 	acc.AddCounter("mem", fields, nil)
 
 	return nil

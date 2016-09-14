@@ -15,6 +15,7 @@ type DiskStats struct {
 
 	MountPoints []string
 	IgnoreFS    []string `toml:"ignore_fs"`
+	UsageOnly   bool     `toml:"usage_only"`
 }
 
 func (_ *DiskStats) Description() string {
@@ -29,6 +30,9 @@ var diskSampleConfig = `
   ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
   ## present on /run, /var/run, /dev/shm or /dev).
   ignore_fs = ["tmpfs", "devtmpfs"]
+
+  ## If true, report only an overall disk utilisation percentage.
+  usage_only = false
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -60,16 +64,24 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			used_percent = float64(du.Used) /
 				(float64(du.Used) + float64(du.Free)) * 100
 		}
+		var fields map[string]interface{}
 
-		fields := map[string]interface{}{
-			"total":        du.Total,
-			"free":         du.Free,
-			"used":         du.Used,
-			"used_percent": used_percent,
-			"inodes_total": du.InodesTotal,
-			"inodes_free":  du.InodesFree,
-			"inodes_used":  du.InodesUsed,
+		if !s.UsageOnly {
+			fields = map[string]interface{}{
+				"used_percent": used_percent,
+			}
+		} else {
+			fields = map[string]interface{}{
+				"total":        du.Total,
+				"free":         du.Free,
+				"used":         du.Used,
+				"used_percent": used_percent,
+				"inodes_total": du.InodesTotal,
+				"inodes_free":  du.InodesFree,
+				"inodes_used":  du.InodesUsed,
+			}
 		}
+
 		acc.AddGauge("disk", fields, tags)
 	}
 
