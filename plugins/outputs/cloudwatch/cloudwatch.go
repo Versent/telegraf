@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -143,7 +144,7 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 
 	numberOfPartitions := len(datums) / size
 	if len(datums)%size != 0 {
-		numberOfPartitions += 1
+		numberOfPartitions++
 	}
 
 	partitions := make([][]*cloudwatch.MetricDatum, numberOfPartitions)
@@ -193,14 +194,16 @@ func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
 			continue
 		}
 
+		metricName := strings.Join([]string{point.Name(), k}, "_")
+
 		datums[i] = &cloudwatch.MetricDatum{
-			MetricName: aws.String(strings.Join([]string{point.Name(), k}, "_")),
+			MetricName: aws.String(snakeToCamel(metricName)),
 			Value:      aws.Float64(value),
 			Dimensions: BuildDimensions(point.Tags()),
 			Timestamp:  aws.Time(point.Time()),
 		}
 
-		i += 1
+		i++
 	}
 
 	return datums
@@ -222,7 +225,7 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 			Name:  aws.String("host"),
 			Value: aws.String(host),
 		}
-		i += 1
+		i++
 	}
 
 	var keys []string
@@ -243,7 +246,7 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 			Value: aws.String(mTags[k]),
 		}
 
-		i += 1
+		i++
 	}
 
 	return dimensions
@@ -253,4 +256,20 @@ func init() {
 	outputs.Add("cloudwatch", func() telegraf.Output {
 		return &CloudWatch{}
 	})
+}
+
+func snakeToCamel(s string) string {
+	var result string
+
+	words := strings.Split(s, "_")
+
+	for _, word := range words {
+		if len(word) > 0 {
+			w := []rune(word)
+			w[0] = unicode.ToUpper(w[0])
+			result += string(w)
+		}
+	}
+
+	return result
 }

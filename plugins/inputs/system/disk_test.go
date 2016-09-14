@@ -54,7 +54,7 @@ func TestDiskStats(t *testing.T) {
 	mps.On("DiskUsage", []string{"/", "/dev"}, []string(nil)).Return(duFiltered, nil)
 	mps.On("DiskUsage", []string{"/", "/home"}, []string(nil)).Return(duAll, nil)
 
-	err = (&DiskStats{ps: &mps}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, UsageOnly: false}).Gather(&acc)
 	require.NoError(t, err)
 
 	numDiskMetrics := acc.NFields()

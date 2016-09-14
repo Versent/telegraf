@@ -40,7 +40,7 @@ func TestMemStats(t *testing.T) {
 
 	mps.On("SwapStat").Return(sms, nil)
 
-	err = (&MemStats{&mps}).Gather(&acc)
+	err = (&MemStats{ps: &mps, UsageOnly: false}).Gather(&acc)
 	require.NoError(t, err)
 
 	memfields := map[string]interface{}{
@@ -54,6 +54,16 @@ func TestMemStats(t *testing.T) {
 		"buffered":          uint64(0),
 		"active":            uint64(8134),
 		"inactive":          uint64(1124),
+	}
+	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
+
+	acc.Metrics = nil
+
+	err = (&MemStats{ps: &mps, UsageOnly: true}).Gather(&acc)
+	require.NoError(t, err)
+
+	memfields = map[string]interface{}{
+		"used_percent": float64(5000) / float64(12400) * 100,
 	}
 	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
 
