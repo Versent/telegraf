@@ -220,14 +220,14 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 
 	i := 0
 
-	// This is pretty ugly but we always want to include the "host" tag if it exists.
-	if host, ok := mTags["host"]; ok {
-		dimensions[i] = &cloudwatch.Dimension{
-			Name:  aws.String("host"),
-			Value: aws.String(host),
-		}
-		i++
-	}
+	// // This is pretty ugly but we always want to include the "host" tag if it exists.
+	// if host, ok := mTags["host"]; ok {
+	// 	dimensions[i] = &cloudwatch.Dimension{
+	// 		Name:  aws.String("host"),
+	// 		Value: aws.String(host),
+	// 	}
+	// 	i++
+	// }
 
 	var keys []string
 	for k := range mTags {
