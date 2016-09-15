@@ -4,7 +4,6 @@ import (
 	"log"
 	"math"
 	"sort"
-	"strings"
 	"time"
 	"unicode"
 
@@ -169,6 +168,7 @@ func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
 	i := 0
 
 	var value float64
+	var metricName string
 
 	for k, v := range point.Fields() {
 		switch t := v.(type) {
@@ -194,10 +194,10 @@ func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
 			continue
 		}
 
-		metricName := strings.Join([]string{point.Name(), k}, "_")
+		metricName = camelCaseName([]string{point.Name(), k})
 
 		datums[i] = &cloudwatch.MetricDatum{
-			MetricName: aws.String(snakeToCamel(metricName)),
+			MetricName: aws.String(metricName),
 			Value:      aws.Float64(value),
 			Dimensions: BuildDimensions(point.Tags()),
 			Timestamp:  aws.Time(point.Time()),
@@ -259,10 +259,8 @@ func init() {
 	})
 }
 
-func snakeToCamel(s string) string {
+func camelCaseName(words []string) string {
 	var result string
-
-	words := strings.Split(s, "_")
 
 	for _, word := range words {
 		if len(word) > 0 {
