@@ -201,6 +201,7 @@ func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
 			Value:      aws.Float64(value),
 			Dimensions: BuildDimensions(point.Tags()),
 			Timestamp:  aws.Time(point.Time()),
+			Unit:       aws.String(cloudwatch.StandardUnitNone),
 		}
 
 		i++
