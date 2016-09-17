@@ -14,13 +14,41 @@ import (
 
 type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error)
-	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, error)
+	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*UsageStat, error)
 	NetIO() ([]net.IOCountersStat, error)
 	NetProto() ([]net.ProtoCountersStat, error)
 	DiskIO() (map[string]disk.IOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
+}
+
+type UsageStat struct {
+	Path              string  `json:"path"`
+	Device            string  `json:"device"`
+	Fstype            string  `json:"fstype"`
+	Total             uint64  `json:"total"`
+	Free              uint64  `json:"free"`
+	Used              uint64  `json:"used"`
+	UsedPercent       float64 `json:"usedPercent"`
+	InodesTotal       uint64  `json:"inodesTotal"`
+	InodesUsed        uint64  `json:"inodesUsed"`
+	InodesFree        uint64  `json:"inodesFree"`
+	InodesUsedPercent float64 `json:"inodesUsedPercent"`
+}
+
+func NewDiskUsageStat(du *disk.UsageStat) *UsageStat {
+	return &UsageStat{
+		Path:              du.Path,
+		Fstype:            du.Fstype,
+		Total:             du.Total,
+		Free:              du.Free,
+		UsedPercent:       du.UsedPercent,
+		InodesTotal:       du.InodesTotal,
+		InodesUsed:        du.InodesUsed,
+		InodesFree:        du.InodesFree,
+		InodesUsedPercent: du.InodesUsedPercent,
+	}
 }
 
 func add(acc telegraf.Accumulator,
@@ -54,7 +82,7 @@ func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 func (s *systemPS) DiskUsage(
 	mountPointFilter []string,
 	fstypeExclude []string,
-) ([]*disk.UsageStat, error) {
+) ([]*UsageStat, error) {
 	parts, err := disk.Partitions(true)
 	if err != nil {
 		return nil, err
@@ -70,7 +98,7 @@ func (s *systemPS) DiskUsage(
 		fstypeExcludeSet[filter] = true
 	}
 
-	var usage []*disk.UsageStat
+	var usage []*UsageStat
 
 	for _, p := range parts {
 		if len(mountPointFilter) > 0 {
@@ -83,10 +111,13 @@ func (s *systemPS) DiskUsage(
 		}
 		mountpoint := os.Getenv("HOST_MOUNT_PREFIX") + p.Mountpoint
 		if _, err := os.Stat(mountpoint); err == nil {
-			du, err := disk.Usage(mountpoint)
+			rdu, err := disk.Usage(mountpoint)
 			if err != nil {
 				return nil, err
 			}
+
+			du := NewDiskUsageStat(rdu)
+
 			du.Path = p.Mountpoint
 			du.Device = p.Device
 			// If the mount point is a member of the exclude set,
