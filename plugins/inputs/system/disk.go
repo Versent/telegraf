@@ -58,6 +58,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"path":   du.Path,
 			"fstype": du.Fstype,
+			"device": du.Device,
 		}
 		var used_percent float64
 		if du.Used+du.Free > 0 {

@@ -88,6 +88,7 @@ func (s *systemPS) DiskUsage(
 				return nil, err
 			}
 			du.Path = p.Mountpoint
+			du.Device = p.Device
 			// If the mount point is a member of the exclude set,
 			// don't gather info on it.
 			_, ok := fstypeExcludeSet[p.Fstype]
