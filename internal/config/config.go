@@ -139,6 +139,9 @@ type AgentConfig struct {
 	Quiet        bool
 	Hostname     string
 	OmitHostname bool
+
+	//Get AWS InstancesID from metadata
+	AWSInstanceID bool
 }
 
 // Inputs returns a list of strings of the configured inputs.
