@@ -72,8 +72,8 @@ func (s *systemPS) DiskUsage(
 
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
-
-	for _, p := range parts {
+	for i := 0; i < len(parts); i++ {
+		p := parts[i]
 		if len(mountPointFilter) > 0 {
 			// If the mount point is not a member of the filter set,
 			// don't gather info on it.
